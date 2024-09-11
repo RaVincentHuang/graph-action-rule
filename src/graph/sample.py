@@ -2,6 +2,7 @@ from littleballoffur import MetropolisHastingsRandomWalkSampler, RandomWalkSampl
     NonBackTrackingRandomWalkSampler, DepthFirstSearchSampler, BreadthFirstSearchSampler, DiffusionSampler, DiffusionTreeSampler, ForestFireSampler, \
     SpikyBallSampler, SnowBallSampler, CirculatedNeighborsRandomWalkSampler
 import networkx as nx
+import random
 def select_sampler(sampler_name: str):
     match sampler_name:
         case "metropolis_hastings_random_walk":
@@ -34,10 +35,10 @@ def select_sampler(sampler_name: str):
             raise ValueError(f"Sampler {sampler_name} not found.")
 
 # TODO 考虑更好的方法
-def sample_graph(graph: nx.DiGraph, sampler: str, node_num: int) -> nx.DiGraph:
+def sample_graph(graph: nx.DiGraph, sampler: str, node_num: int, trans=lambda x : x) -> nx.DiGraph:
     undir_graph = nx.Graph(graph)
-    model = select_sampler(sampler)(number_of_nodes=node_num)
-    undir_subgraph = model.sample(undir_graph)
+    start_node = random.choice(list(graph.nodes))
+    model = select_sampler(sampler)(number_of_nodes=trans(node_num))
+    undir_subgraph = model.sample(undir_graph, start_node=start_node)
     subgraph = graph.subgraph(undir_subgraph.nodes)
     return subgraph
-

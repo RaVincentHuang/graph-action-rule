@@ -38,7 +38,6 @@ print(f"Average node degree: {data.num_edges / data.num_nodes:.2f}")
 print(f"Has isolated nodes: {data.has_isolated_nodes()}")
 print(f"Has self-loops: {data.has_self_loops()}")
 
-torch.manual_seed(12345)
 dataset = dataset.shuffle()
 
 train_dataset = dataset[:150]
@@ -77,7 +76,6 @@ from torch_geometric.nn import global_mean_pool
 class GCN(torch.nn.Module):
     def __init__(self, hidden_channels):
         super(GCN, self).__init__()
-        torch.manual_seed(12345)
         self.conv1 = GraphConv(dataset.num_node_features, hidden_channels)
         self.conv2 = GraphConv(hidden_channels, hidden_channels)
         self.conv3 = GraphConv(hidden_channels, hidden_channels)

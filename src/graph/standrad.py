@@ -2,10 +2,13 @@
 from calendar import c
 from enum import IntEnum
 import json
+from operator import is_
 import networkx as nx
 from networkx import DiGraph
 from networkx import is_empty
 import torch_geometric.utils
+
+from task.game24 import ASTNode 
 
 import llm.embedding
 from llm.tag import Tag
@@ -72,18 +75,19 @@ class BaseGraph:
     def convert_to_nx(self) -> nx.DiGraph:
         nx_graph = nx.DiGraph()
         for node in self.nodes:
-            nx_graph.add_node(node.id, value=node.value, acc=node.acc)
+            feature = node.feature if node.feature else None
+            nx_graph.add_node(node.id, value=node.value, acc=node.acc, feature=feature)
         
         for edge in self.edges:
             nx_graph.add_edge(edge.src, edge.dst)
         
         return nx_graph
     
-    def load_from_nx(self, nx_graph: nx.DiGraph):
+    def from_nx(self, nx_graph: nx.DiGraph):
         self.nodes = []
         self.edges = []
         for node_id in nx_graph.nodes:
-            node = Node(node_id, nx_graph.nodes[node_id]['value'], nx_graph.nodes[node_id]['acc'])
+            node = Node(node_id, nx_graph.nodes[node_id]['value'], nx_graph.nodes[node_id]['acc'], nx_graph.nodes[node_id]['feature'])
             self.nodes.append(node)
         
         for edge in nx_graph.edges:
@@ -178,7 +182,9 @@ class Graph24PointI(BaseGraph):
                 'name': self.name,
                 'tag': str(self.tag),
                 'nodes': [],
-                'edges': []
+                'edges': [],
+                'goal': list(self.goal),
+                'achievements': list(self.achievements)
             }
             for node in self.nodes:                
                 state = {
@@ -186,7 +192,8 @@ class Graph24PointI(BaseGraph):
                     'formula': node.value[0],
                     'last_formula': node.value[1],
                     'operator': node.value[2],
-                    'acc': node.acc
+                    'acc': node.acc,
+                    'future': node.feature
                 }
                 tot_tree_json['nodes'].append(state)
             
@@ -204,18 +211,102 @@ class Graph24PointI(BaseGraph):
         self.edges = []
         with open(json_path, 'r') as file:
             tot_tree_json = json.load(file)
-            index = 0
-            for state in tot_tree_json['nodes'].items():
-                node = Node(index, (state['formula'], state['last_formula'], state['operator']), acc = state['value'])
+            for state in tot_tree_json['nodes']:
+                node = Node(state['id'], (state['formula'], state['last_formula'], state['operator']), acc = state['acc'], feature=state['future'])
                 self.nodes.append(node)
-                index += 1
-                assert index == len(self.nodes)
             
-            for state in tot_tree_json['nodes'].items():
+            for state in tot_tree_json['edges']:
                 edge = Edge(state['src'], state['dst'])
                 self.edges.append(edge)
                 
-    
+            self.goal = set(tot_tree_json['goal'])
+            self.achievements = set(tot_tree_json['achievements'])
+            
+    def from_ast(self, roots: list[ASTNode], nums: list[int]):
+        self.nodes = []
+        self.edges = []
+        
+        def post_order_traversal(node: ASTNode):
+            left, right = None, None
+            if node.left:
+                left = post_order_traversal(node.left)
+            if node.right:
+                right = post_order_traversal(node.right)
+            if node.leaf:
+                return node.value
+            stk.append((node.value, left, right))
+            return eval(f"{left} {node.value} {right}")
+        
+        def transform_nums(nums: tuple[int, int, int, int], left, right, res) -> tuple[int, int, int, int]:
+            tmp = [x for x in nums if x != -114514]
+            # print(tmp)
+            # print(left, right, res)
+            tmp.remove(left)
+            tmp.remove(right)
+            tmp.append(res)
+            match tmp:
+                case [a, b, c, d]:
+                    return a, b, c, d
+                case [a, b, c]:
+                    return a, b, c, -114514
+                case [a, b]:
+                    return a, b, -114514, -114514
+                case [a]:
+                    return a, -114514, -114514, -114514
+                case _:
+                    return -114514, -114514, -114514, -114514
+        class HashNode:
+            def __init__(self, nums: tuple[int, int, int, int], op=None, left=None, right=None):
+                self.nums = nums
+                self.op = op
+                self.left = left
+                self.right = right
+                self.value = eval(f"{left} {op} {right}") if op else None
+                
+            def is_root(self):
+                return not self.op
+            
+            def formula(self):
+                nums = [str(x) for x in self.nums if x != -114514]
+                left = ", ".join(map(str, nums))
+                if self.op is None:
+                    return left
+                return f"{self.left} {self.op} {self.right} = {self.value} (left: {left}) \n"
+        
+        node_check: dict[HashNode, int] = {}
+        parent: dict[int, int] = {}
+        
+        nums_tuple: tuple[int, int, int, int] = (nums[0], nums[1], nums[2], nums[3])
+        
+        node_check[HashNode(nums_tuple)] = 0
+        
+        for root in roots:
+            stk = []
+            post_order_traversal(root)
+            parent_ptr = 0
+            nums_tmp = nums_tuple
+            for (op, left, right) in stk:
+                res = eval(f"{left} {op} {right}")
+                nums_tmp = transform_nums(nums_tmp, left, right, res)
+                hash = HashNode(nums_tmp, op, left, right)
+                id = node_check[hash] if hash in node_check else len(node_check)
+                node_check[HashNode(nums_tmp, op, left, right)] = id
+                parent[id] = parent_ptr
+                parent_ptr = id
+                
+        formulas = {}
+        for node, id in node_check.items():
+            last_formula = node.formula()
+            if node.is_root():
+                self.nodes.append(Node(id, (last_formula, last_formula, 'null'), acc=0))
+                continue
+            parent_id = parent[id]
+            pre = formulas[parent_id] if parent_id in formulas else ""
+            formula = pre + last_formula
+            formulas[id] = formula
+            self.nodes.append(Node(id, (last_formula, formula, node.op), acc=0))
+            self.edges.append(Edge(parent_id, id))
+            
 
 class SubgraphType(IntEnum):
     T0 = 0
@@ -233,6 +324,7 @@ class Graph24PointII(BaseGraph):
     def calc_type(self, graph: Graph24PointI):
         # graph.calc_goal().calc_achievements()
         subgraph = set(map(lambda x: x.id, self.nodes))
+        # print(f"subgraph: {subgraph}, achievements: {graph.achievements}, insert: {subgraph & graph.achievements}")
         if subgraph.issubset(graph.achievements):
             self.type = SubgraphType.T0
         elif subgraph & graph.achievements:
