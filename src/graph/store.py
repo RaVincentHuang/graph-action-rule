@@ -33,14 +33,20 @@ class SubgraphDataset(Dataset):
         data_list = torch.load(path)
         return SubgraphDataset(data_list)
 
+<<<<<<< HEAD
 def _process_raw_file(file_path, name, tag, graph_path, index):
     graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+=======
+def _process_file(file_path, name, tag, graph_path, index):
+    graphI = Graph24PointI(f"{name}I_{index}", tag)
+>>>>>>> bcfc9da (add)
     graphI.load_from_native_json(file_path)
     graphI.calc_goal().calc_achievements()
     for node in graphI.nodes:
         node.calculate_feature()
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
+<<<<<<< HEAD
 def _process_file(file_path, name, tag, graph_path, index):
     graphI = Graph24PointI(f"{name}I_{index}", index, tag)
     graphI.load_from_json(file_path)
@@ -50,6 +56,10 @@ def _process_file(file_path, name, tag, graph_path, index):
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
 def graph_feature_calc(json_path, graph_path, name, tag: Tag):
+=======
+def graph_future_calc(json_path, graph_path, name, tag: Tag):
+
+>>>>>>> bcfc9da (add)
     with tqdm(total=len(os.listdir(json_path))) as pbar:
         pool = multiprocessing.Pool(processes=16)
         index = 1
@@ -60,7 +70,10 @@ def graph_feature_calc(json_path, graph_path, name, tag: Tag):
         pool.close()
         pool.join()
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> bcfc9da (add)
 def test_raw(json_path, name, tag: Tag):
     graphI_list_acc: list[Graph24PointI] = []
     graphI_list_dead: list[Graph24PointI] = []
@@ -69,8 +82,12 @@ def test_raw(json_path, name, tag: Tag):
         file_path = os.path.join(json_path, file_name)
         # Read the file and process the data
         print(file_name)
+<<<<<<< HEAD
         index = len(graphI_list_acc) + len(graphI_list_dead) + 1
         graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+=======
+        graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
+>>>>>>> bcfc9da (add)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -83,6 +100,7 @@ def test_raw(json_path, name, tag: Tag):
     print(f"Get Dead {len(graphI_list_dead)} graphs")
 
 
+<<<<<<< HEAD
 def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_list: list[Graph24PointI] = []
     
@@ -170,6 +188,55 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
             pbar.update(1)
     
     data_list = []
+=======
+def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
+    graphI_dead: list[Graph24PointI] = []
+    graphI_acc: list[Graph24PointI] = []
+    
+    with tqdm(total=len(os.listdir(json_path)), desc='load graphs') as pbar:
+        for file_name in os.listdir(json_path):
+            # print(f"Load file: {file_name}")
+            file_path = os.path.join(json_path, file_name)
+            # Read the file and process the data
+            graphI = Graph24PointI(f"{file_name.split('.')[0]}", tag)
+            graphI.load_from_json(file_path)
+            if graphI.achievements:
+                graphI_acc.append(graphI)
+            else:
+                graphI_dead.append(graphI)
+            pbar.update(1)
+    
+    print(f"Get Acc {len(graphI_acc)} graphs")
+    print(f"Get Dead {len(graphI_dead)} graphs")
+    
+    subgraph_list: list[Graph24PointII] = []
+    
+    with tqdm(total=config.total_num // 2, desc='subgraph sample in dead') as pbar:
+        for i in range(config.total_num // 2):
+            random.seed(time.time())
+            graphI = random.choice(graphI_dead)
+            nx_graph: DiGraph = graphI.convert_to_nx()
+            nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
+            subgraph = Graph24PointII(f"{name}II_{i + 1 + (config.total_num // 2)}", tag)
+            subgraph.from_nx(nx_subgraph)
+            subgraph.calc_type(graphI)
+            subgraph_list.append(subgraph)
+            pbar.update(1)
+            
+    with tqdm(total=config.total_num // 2, desc='subgraph sample in acc') as pbar:
+        for i in range(config.total_num // 2):
+            random.seed(time.time())
+            graphI = random.choice(graphI_acc)
+            nx_graph: DiGraph = graphI.convert_to_nx()
+            nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
+            subgraph = Graph24PointII(f"{name}II_{i + 1}", tag)
+            subgraph.from_nx(nx_subgraph)
+            subgraph.calc_type(graphI)
+            subgraph_list.append(subgraph)
+            pbar.update(1)
+    
+    data_list = []
+>>>>>>> bcfc9da (add)
     with tqdm(total=len(subgraph_list), desc='convert to pyg') as pbar:
         for subgraph in subgraph_list:
             data = subgraph.convert_to_pyg()
@@ -188,8 +255,12 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
         # print(f"Load file: {file_name}")
         file_path = os.path.join(json_path, file_name)
         # Read the file and process the data
+<<<<<<< HEAD
         index = len(graphI_list_acc) + len(graphI_list_dead) + 1
         graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+=======
+        graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
+>>>>>>> bcfc9da (add)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -229,6 +300,7 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
     print(f"Get {len(data_list)} subgraphs")
     dataset = SubgraphDataset(data_list)
     dataset.save(f"{dataset_path}/{name}{config}.pt")
+<<<<<<< HEAD
 
 
 def combine_task(source_path, truth_path, target_path):
@@ -248,3 +320,5 @@ def combine_task(source_path, truth_path, target_path):
         combine_graph.save_to_json(os.path.join(target_path, f"{graphI.name}.json"))
     
 
+=======
+>>>>>>> bcfc9da (add)

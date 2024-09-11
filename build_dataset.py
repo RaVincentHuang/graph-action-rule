@@ -1,5 +1,6 @@
 import sys
 sys.path.append('/home/vincent/graphrule/src')
+<<<<<<< HEAD
 import graph
 from graph.store import dataset_build, graph_feature_calc, test_raw, combine_task, dataset_build_truth
 from graph.standard import Graph24PointI
@@ -67,9 +68,20 @@ json_path = "/home/vincent/graphrule/data/graph/truth"
 graph_path = "/home/vincent/graphrule/data/graph/gpt4o-mini-0.7-p1v5g5_1_re_combine"
 
 source_path = "/home/vincent/graphrule/data/graph/gpt4o-mini-0.7-p1v5g5_1_re"
+=======
+from graph.store import dataset_build, graph_future_calc, test_raw
+from llm.tag import Tag
+from utils.config import DatasetConfig
+import random
+
+
+json_path = "/home/vincent/graphrule/data/raw/ToT/24point/gpt4o-mini-0.7-p1v5g5_1"
+graph_path = "/home/vincent/graphrule/data/graph/gpt4o-mini-0.7-p1v5g5_1"
+>>>>>>> bcfc9da (add)
 target_path = "/home/vincent/graphrule/data/subgraph"
 truth_path = "/home/vincent/graphrule/data/graph/truth_combine_re_format"
 
+<<<<<<< HEAD
 name = "24point"
 tag = Tag("gpt-4o-mini", "ToT", "24point")
 # test_raw(json_path, "24point", Tag("gpt-4o-mini", "ToT", "24point"))
@@ -83,3 +95,10 @@ tag = Tag("gpt-4o-mini", "ToT", "24point")
 # combine_task(source_path, truth_path, graph_path)
 
 dataset_build_truth(graph_path, target_path, "24point_3", Tag("gpt-4o-mini", "ToT", "24point"), DatasetConfig("random_walk", 16000, 8, node_random))
+=======
+node_random = lambda x: random.randint(x - 4, x + 4)
+
+# test_raw(json_path, "24point", Tag("gpt-4o-mini", "ToT", "24point"))
+# dataset_build(graph_path, target_path, "24point_2", Tag("gpt-4o-mini", "ToT", "24point"), DatasetConfig("random_walk", 6400, 10, node_random))
+graph_future_calc(json_path, graph_path, "24point", Tag("gpt-4o-mini", "ToT", "24point"))
+>>>>>>> bcfc9da (add)
