@@ -34,12 +34,17 @@ class SubgraphDataset(Dataset):
         return SubgraphDataset(data_list)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def _process_raw_file(file_path, name, tag, graph_path, index):
     graphI = Graph24PointI(f"{name}I_{index}", index, tag)
 =======
 def _process_file(file_path, name, tag, graph_path, index):
     graphI = Graph24PointI(f"{name}I_{index}", tag)
 >>>>>>> bcfc9da (add)
+=======
+def _process_raw_file(file_path, name, tag, graph_path, index):
+    graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+>>>>>>> ec1ea1d (d)
     graphI.load_from_native_json(file_path)
     graphI.calc_goal().calc_achievements()
     for node in graphI.nodes:
@@ -47,6 +52,9 @@ def _process_file(file_path, name, tag, graph_path, index):
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ec1ea1d (d)
 def _process_file(file_path, name, tag, graph_path, index):
     graphI = Graph24PointI(f"{name}I_{index}", index, tag)
     graphI.load_from_json(file_path)
@@ -56,10 +64,13 @@ def _process_file(file_path, name, tag, graph_path, index):
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
 def graph_feature_calc(json_path, graph_path, name, tag: Tag):
+<<<<<<< HEAD
 =======
 def graph_future_calc(json_path, graph_path, name, tag: Tag):
 
 >>>>>>> bcfc9da (add)
+=======
+>>>>>>> ec1ea1d (d)
     with tqdm(total=len(os.listdir(json_path))) as pbar:
         pool = multiprocessing.Pool(processes=16)
         index = 1
@@ -71,9 +82,13 @@ def graph_future_calc(json_path, graph_path, name, tag: Tag):
         pool.join()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 >>>>>>> bcfc9da (add)
+=======
+
+>>>>>>> ec1ea1d (d)
 def test_raw(json_path, name, tag: Tag):
     graphI_list_acc: list[Graph24PointI] = []
     graphI_list_dead: list[Graph24PointI] = []
@@ -83,11 +98,16 @@ def test_raw(json_path, name, tag: Tag):
         # Read the file and process the data
         print(file_name)
 <<<<<<< HEAD
+<<<<<<< HEAD
         index = len(graphI_list_acc) + len(graphI_list_dead) + 1
         graphI = Graph24PointI(f"{name}I_{index}", index, tag)
 =======
         graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
 >>>>>>> bcfc9da (add)
+=======
+        index = len(graphI_list_acc) + len(graphI_list_dead) + 1
+        graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+>>>>>>> ec1ea1d (d)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -101,6 +121,9 @@ def test_raw(json_path, name, tag: Tag):
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ec1ea1d (d)
 def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_list: list[Graph24PointI] = []
     
@@ -140,6 +163,7 @@ def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: Dataset
     dataset = SubgraphDataset(data_list)
     dataset.save(f"{dataset_path}/{name}_{config}.pt")
 
+<<<<<<< HEAD
 def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_dead: list[Graph24PointI] = []
     graphI_acc: list[Graph24PointI] = []
@@ -189,6 +213,8 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
     
     data_list = []
 =======
+=======
+>>>>>>> ec1ea1d (d)
 def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_dead: list[Graph24PointI] = []
     graphI_acc: list[Graph24PointI] = []
@@ -198,7 +224,8 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
             # print(f"Load file: {file_name}")
             file_path = os.path.join(json_path, file_name)
             # Read the file and process the data
-            graphI = Graph24PointI(f"{file_name.split('.')[0]}", tag)
+            index = int(file_name.split('_')[-1].split('.')[0])
+            graphI = Graph24PointI(f"{file_name.split('.')[0]}", index, tag)
             graphI.load_from_json(file_path)
             if graphI.achievements:
                 graphI_acc.append(graphI)
@@ -256,11 +283,16 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
         file_path = os.path.join(json_path, file_name)
         # Read the file and process the data
 <<<<<<< HEAD
+<<<<<<< HEAD
         index = len(graphI_list_acc) + len(graphI_list_dead) + 1
         graphI = Graph24PointI(f"{name}I_{index}", index, tag)
 =======
         graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
 >>>>>>> bcfc9da (add)
+=======
+        index = len(graphI_list_acc) + len(graphI_list_dead) + 1
+        graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+>>>>>>> ec1ea1d (d)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -301,6 +333,9 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
     dataset = SubgraphDataset(data_list)
     dataset.save(f"{dataset_path}/{name}{config}.pt")
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ec1ea1d (d)
 
 
 def combine_task(source_path, truth_path, target_path):
@@ -320,5 +355,8 @@ def combine_task(source_path, truth_path, target_path):
         combine_graph.save_to_json(os.path.join(target_path, f"{graphI.name}.json"))
     
 
+<<<<<<< HEAD
 =======
 >>>>>>> bcfc9da (add)
+=======
+>>>>>>> ec1ea1d (d)

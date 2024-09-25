@@ -2,7 +2,6 @@
 from calendar import c
 from enum import IntEnum
 import json
-from operator import is_
 import networkx as nx
 from networkx import DiGraph
 from networkx import is_empty
@@ -223,7 +222,10 @@ class Graph24PointI(BaseGraph):
                 
             self.goal = set(tot_tree_json['goal'])
             self.achievements = set(tot_tree_json['achievements'])
+<<<<<<< HEAD
 <<<<<<< HEAD:src/graph/standard.py
+=======
+>>>>>>> ec1ea1d (d)
     
     @staticmethod
     def from_json(json_path) -> 'Graph24PointI':
@@ -258,8 +260,11 @@ class Graph24PointI(BaseGraph):
         res.re_index()
 
         return res
+<<<<<<< HEAD
 =======
 >>>>>>> bcfc9da (add):src/graph/standrad.py
+=======
+>>>>>>> ec1ea1d (d)
             
     def from_ast(self, roots: list[ASTNode], nums: list[int]):
         self.nodes = []
@@ -345,7 +350,10 @@ class Graph24PointI(BaseGraph):
             formulas[id] = formula
             self.nodes.append(Node(id, (last_formula, formula, node.op), acc=0))
             self.edges.append(Edge(parent_id, id))
+<<<<<<< HEAD
 <<<<<<< HEAD:src/graph/standard.py
+=======
+>>>>>>> ec1ea1d (d)
     
     def re_index(self):
         id_map = {node.id: i for i, node in enumerate(self.nodes)}
@@ -355,8 +363,11 @@ class Graph24PointI(BaseGraph):
         for edge in self.edges:
             edge.src = id_map[edge.src]
             edge.dst = id_map[edge.dst]
+<<<<<<< HEAD
 =======
 >>>>>>> bcfc9da (add):src/graph/standrad.py
+=======
+>>>>>>> ec1ea1d (d)
             
 
 class SubgraphType(IntEnum):

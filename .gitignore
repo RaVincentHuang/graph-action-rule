@@ -1,6 +1,13 @@
 
+<<<<<<< HEAD
 data/
 .vscode/
 __pycache__/
 .pytest_cache/
+=======
+/data
+/.vscode
+/__pycache__
+/.pytest_cache
+>>>>>>> ec1ea1d (d)
 
