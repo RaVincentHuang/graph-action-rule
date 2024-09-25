@@ -1,6 +1,6 @@
 
-/data
-/.vscode
-/__pycache__
-/.pytest_cache
+data/
+.vscode/
+__pycache__/
+.pytest_cache/
 
