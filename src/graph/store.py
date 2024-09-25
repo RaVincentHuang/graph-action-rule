@@ -2,10 +2,10 @@ import random
 import time
 from networkx import DiGraph
 import torch
-from torch_geometric.data import Data, Dataset
+from torch_geometric.data import Data, Dataset, OnDiskDataset
 
 from graph.sample import sample_graph
-from graph.standrad import Graph24PointI, Graph24PointII
+from graph.standard import Graph24PointI, Graph24PointII, Graph24PointIII, SubgraphType
 from llm.tag import Tag
 from utils.config import DatasetConfig
 
@@ -33,16 +33,23 @@ class SubgraphDataset(Dataset):
         data_list = torch.load(path)
         return SubgraphDataset(data_list)
 
-def _process_file(file_path, name, tag, graph_path, index):
-    graphI = Graph24PointI(f"{name}I_{index}", tag)
+def _process_raw_file(file_path, name, tag, graph_path, index):
+    graphI = Graph24PointI(f"{name}I_{index}", index, tag)
     graphI.load_from_native_json(file_path)
     graphI.calc_goal().calc_achievements()
     for node in graphI.nodes:
         node.calculate_feature()
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
-def graph_future_calc(json_path, graph_path, name, tag: Tag):
-
+def _process_file(file_path, name, tag, graph_path, index):
+    graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+    graphI.load_from_json(file_path)
+    graphI.calc_goal().calc_achievements()
+    for node in graphI.nodes:
+        node.calculate_feature()
+    graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
+    
+def graph_feature_calc(json_path, graph_path, name, tag: Tag):
     with tqdm(total=len(os.listdir(json_path))) as pbar:
         pool = multiprocessing.Pool(processes=16)
         index = 1
@@ -53,6 +60,7 @@ def graph_future_calc(json_path, graph_path, name, tag: Tag):
         pool.close()
         pool.join()
 
+
 def test_raw(json_path, name, tag: Tag):
     graphI_list_acc: list[Graph24PointI] = []
     graphI_list_dead: list[Graph24PointI] = []
@@ -61,7 +69,8 @@ def test_raw(json_path, name, tag: Tag):
         file_path = os.path.join(json_path, file_name)
         # Read the file and process the data
         print(file_name)
-        graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
+        index = len(graphI_list_acc) + len(graphI_list_dead) + 1
+        graphI = Graph24PointI(f"{name}I_{index}", index, tag)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -74,6 +83,45 @@ def test_raw(json_path, name, tag: Tag):
     print(f"Get Dead {len(graphI_list_dead)} graphs")
 
 
+def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
+    graphI_list: list[Graph24PointI] = []
+    
+    for filename in tqdm(os.listdir(json_path), desc='load graphs'):
+        file_path = os.path.join(json_path, filename)
+        graphI = Graph24PointI.from_json(file_path)
+        graphI.calc_goal().calc_achievements()
+        graphI_list.append(graphI)
+    
+    subgraph_type0_cnt = 0
+    subgraph_type1_cnt = 0
+    # subgraph_type0: list[Graph24PointIII] = []
+    # subgraph_type1: list[Graph24PointIII] = []
+    data_list = []
+    
+    with tqdm(total=config.total_num, desc='subgraph sample') as pbar:
+        while subgraph_type0_cnt < config.total_num // 2 or subgraph_type1_cnt < config.total_num // 2:
+            random.seed(time.time())
+            graphI = random.choice(graphI_list)
+            nx_graph: DiGraph = graphI.convert_to_nx()
+            nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
+            subgraph = Graph24PointIII(f"{name}II_{pbar.n + 1}", tag)
+            subgraph.from_nx(nx_subgraph)
+            subgraph.calc_type(graphI)
+            if subgraph.type == SubgraphType.T0 and subgraph_type0_cnt < config.total_num // 2:
+                subgraph_type0_cnt += 1
+                data = subgraph.convert_to_pyg()
+                data_list.append(data)
+                pbar.update(1)
+            elif subgraph.type == SubgraphType.T1 and subgraph_type1_cnt < config.total_num // 2:
+                subgraph_type1_cnt += 1
+                data = subgraph.convert_to_pyg()
+                data_list.append(data)
+                pbar.update(1)
+    
+    print(f"Get {len(data_list)} subgraphs")
+    dataset = SubgraphDataset(data_list)
+    dataset.save(f"{dataset_path}/{name}_{config}.pt")
+
 def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_dead: list[Graph24PointI] = []
     graphI_acc: list[Graph24PointI] = []
@@ -83,7 +131,8 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
             # print(f"Load file: {file_name}")
             file_path = os.path.join(json_path, file_name)
             # Read the file and process the data
-            graphI = Graph24PointI(f"{file_name.split('.')[0]}", tag)
+            index = int(file_name.split('_')[-1].split('.')[0])
+            graphI = Graph24PointI(f"{file_name.split('.')[0]}", index, tag)
             graphI.load_from_json(file_path)
             if graphI.achievements:
                 graphI_acc.append(graphI)
@@ -139,7 +188,8 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
         # print(f"Load file: {file_name}")
         file_path = os.path.join(json_path, file_name)
         # Read the file and process the data
-        graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
+        index = len(graphI_list_acc) + len(graphI_list_dead) + 1
+        graphI = Graph24PointI(f"{name}I_{index}", index, tag)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -179,3 +229,22 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
     print(f"Get {len(data_list)} subgraphs")
     dataset = SubgraphDataset(data_list)
     dataset.save(f"{dataset_path}/{name}{config}.pt")
+
+
+def combine_task(source_path, truth_path, target_path):
+    
+    truth_path_map = {}
+    for file_name in tqdm(os.listdir(truth_path), desc='Load truth path'):
+        file_path = os.path.join(truth_path, file_name)
+        graphI = Graph24PointI.from_json(file_path)
+        truth_path_map[graphI.index] = file_path
+        
+    for file_name in tqdm(os.listdir(source_path), desc='Combine nodes'):
+        file_path = os.path.join(source_path, file_name)
+        graphI = Graph24PointI.from_json(file_path)
+        index = graphI.index
+        graphI_truth = Graph24PointI.from_json(truth_path_map[index])
+        combine_graph = graphI.combine(graphI_truth)
+        combine_graph.save_to_json(os.path.join(target_path, f"{graphI.name}.json"))
+    
+

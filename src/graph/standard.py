@@ -2,7 +2,6 @@
 from calendar import c
 from enum import IntEnum
 import json
-from operator import is_
 import networkx as nx
 from networkx import DiGraph
 from networkx import is_empty
@@ -61,7 +60,7 @@ class BaseGraph:
         self.name = name
         self.tag: Tag = tag
         self.nodes: list[Node] = []
-        self.edges = []
+        self.edges: list[Edge] = []
         
     def load_from_native_json(self, json_path):
         pass
@@ -113,8 +112,9 @@ class BaseGraph:
     
 
 class Graph24PointI(BaseGraph):
-    def __init__(self, name, tag):
+    def __init__(self, name, index, tag):
         super().__init__(name, tag)
+        self.index = index
         self.goal = set()
         self.achievements = set()
         
@@ -181,6 +181,7 @@ class Graph24PointI(BaseGraph):
             tot_tree_json = {
                 'name': self.name,
                 'tag': str(self.tag),
+                'index': self.index,
                 'nodes': [],
                 'edges': [],
                 'goal': list(self.goal),
@@ -221,6 +222,40 @@ class Graph24PointI(BaseGraph):
                 
             self.goal = set(tot_tree_json['goal'])
             self.achievements = set(tot_tree_json['achievements'])
+    
+    @staticmethod
+    def from_json(json_path) -> 'Graph24PointI':
+        with open(json_path, 'r') as file:
+            tot_tree_json = json.load(file)
+            name = tot_tree_json['name']
+            tag = Tag.from_str(tot_tree_json['tag'])
+            index = tot_tree_json['index']
+            graph = Graph24PointI(name, index, tag)
+            graph.load_from_json(json_path)
+        return graph
+        
+            
+    def combine(self, graph: 'Graph24PointI') -> 'Graph24PointI':
+        res = Graph24PointI(self.name, self.index, self.tag)
+        res.nodes = self.nodes.copy()
+        res.edges = self.edges.copy()
+        
+        shift_index = {}
+        shift_index[0] = 0
+        for node in graph.nodes:
+            if node.id != 0:
+                node_cpy = Node(node.id + len(self.nodes), node.value, node.acc, node.feature)
+                shift_index[node.id] = node.id + len(self.nodes)
+                res.nodes.append(node_cpy)
+        
+        for edge in graph.edges:
+            src, dst = shift_index[edge.src], shift_index[edge.dst]
+            edge_cpy = Edge(src, dst)
+            res.edges.append(edge_cpy)
+        
+        res.re_index()
+
+        return res
             
     def from_ast(self, roots: list[ASTNode], nums: list[int]):
         self.nodes = []
@@ -306,6 +341,15 @@ class Graph24PointI(BaseGraph):
             formulas[id] = formula
             self.nodes.append(Node(id, (last_formula, formula, node.op), acc=0))
             self.edges.append(Edge(parent_id, id))
+    
+    def re_index(self):
+        id_map = {node.id: i for i, node in enumerate(self.nodes)}
+        for i, node in enumerate(self.nodes):
+            node.id = i
+        
+        for edge in self.edges:
+            edge.src = id_map[edge.src]
+            edge.dst = id_map[edge.dst]
             
 
 class SubgraphType(IntEnum):
@@ -347,6 +391,39 @@ class Graph24PointII(BaseGraph):
         # data = torch_geometric.data.Data(x=torch.tensor(x), edge_index=torch.tensor(edge_index))
         # return data
         
+        nx_graph = nx.DiGraph()
+        for node in self.nodes:
+            if node.feature is None:
+                node.calculate_feature()
+            nx_graph.add_node(node.id, x=node.feature)
+        
+        for edge in self.edges:
+            nx_graph.add_edge(edge.src, edge.dst)
+            
+        data = torch_geometric.utils.from_networkx(nx_graph)
+        data.y = torch.tensor([self.type], dtype=torch.long)
+        
+        return data
+                
+    def __format__(self, format_spec: str) -> str:
+        return f"Type: {self.type}\n" + super().__format__(format_spec)
+    
+    def __str__(self) -> str:
+        return f"Type: {self.type}\n" + super().__str__()
+
+class Graph24PointIII(BaseGraph):
+    def __init__(self, name, tag):
+        super().__init__(name, tag)
+        self.type: SubgraphType = SubgraphType.UNKNOWN
+    
+    def calc_type(self, graph: Graph24PointI):
+        subgraph = set(map(lambda x: x.id, self.nodes))
+        if subgraph & graph.achievements:
+            self.type = SubgraphType.T1
+        else:
+            self.type = SubgraphType.T0
+    
+    def convert_to_pyg(self) -> torch_geometric.data.Data:
         nx_graph = nx.DiGraph()
         for node in self.nodes:
             if node.feature is None:

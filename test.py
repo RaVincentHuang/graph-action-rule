@@ -4,10 +4,11 @@ import random
 
 from networkx import DiGraph
 sys.path.append('/home/vincent/graphrule/src')
-
+from sklearn.preprocessing import normalize
 from graph.sample import sample_graph
-from graph.standrad import Graph24PointI, Graph24PointII
+from graph.standard import Graph24PointI, Graph24PointII
 from llm.tag import Tag
+from llm.embedding import get_embedding
 
 from graph.model import GraphClassifier
 
@@ -16,24 +17,22 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torch
 
-index = 4
-log_jason_path = f"/home/vincent/graphrule/data/ToT/24point/gpt4o-mini-0.7-p1v3g3/game24-{index}_gpt-4o-mini_0.7_propose1_value3_greedy3.json"
-graph = Graph24PointI(f"tot_24point_gpt4o_{index}", Tag("gpt-4o-mini", "ToT", "24point"))
-graph.load_from_native_json(log_jason_path)
-nx_graph: DiGraph = graph.convert_to_nx()
-trans = lambda x: random.randint(x - 4, x + 4)
-nx_subgraph = sample_graph(nx_graph, "random_walk", 10, trans)
-cnt = 0
-subgraph = Graph24PointII(f"tot_24point_gpt4o_{index}_{cnt}", Tag("gpt-4o-mini", "ToT", "24point"))
-subgraph.from_nx(nx_subgraph)
-subgraph.calc_type(graph)
+import numpy as np
+from numpy.linalg import norm
+from scipy.spatial.distance import cosine
 
-data = subgraph.convert_to_pyg()
-model = GraphClassifier(data.x.shape[1], 64, 4)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-model.train()
-out = model(data)
-loss = F.cross_entropy(out, data.y)
-loss.backward()
-optimizer.step()
-print(data.y)
+s1 = "2 + 2 = 4 (left: 4 9 12)"
+s2 = "2 + 2 = 4 (left: 4, 9, 12)"
+s3 = "2 * 2 = 4 (left: 4, 9, 12)"
+
+vec1 = np.array(get_embedding(s1))
+vec2 = np.array(get_embedding(s2))
+vec3 = np.array(get_embedding(s3))
+
+vecs = np.array([vec1, vec2, vec3])
+vecs = normalize(vecs, axis=0, norm='l2')
+
+for i in range(len(vecs)):
+    for j in range(i + 1, len(vecs)):
+        cos_sim = 1 - cosine(vecs[i], vecs[j])
+        print(f"Cosine similarity between vecs[{i}] and vecs[{j}]: {cos_sim}")
