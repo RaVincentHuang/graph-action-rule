@@ -1,0 +1,1 @@
+python -m gspan_mining -s 900 -l 4 $1

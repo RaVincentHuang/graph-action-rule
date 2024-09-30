@@ -33,28 +33,14 @@ class SubgraphDataset(Dataset):
         data_list = torch.load(path)
         return SubgraphDataset(data_list)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 def _process_raw_file(file_path, name, tag, graph_path, index):
     graphI = Graph24PointI(f"{name}I_{index}", index, tag)
-=======
-def _process_file(file_path, name, tag, graph_path, index):
-    graphI = Graph24PointI(f"{name}I_{index}", tag)
->>>>>>> bcfc9da (add)
-=======
-def _process_raw_file(file_path, name, tag, graph_path, index):
-    graphI = Graph24PointI(f"{name}I_{index}", index, tag)
->>>>>>> ec1ea1d (d)
     graphI.load_from_native_json(file_path)
     graphI.calc_goal().calc_achievements()
     for node in graphI.nodes:
         node.calculate_feature()
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> ec1ea1d (d)
 def _process_file(file_path, name, tag, graph_path, index):
     graphI = Graph24PointI(f"{name}I_{index}", index, tag)
     graphI.load_from_json(file_path)
@@ -64,13 +50,6 @@ def _process_file(file_path, name, tag, graph_path, index):
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
 def graph_feature_calc(json_path, graph_path, name, tag: Tag):
-<<<<<<< HEAD
-=======
-def graph_future_calc(json_path, graph_path, name, tag: Tag):
-
->>>>>>> bcfc9da (add)
-=======
->>>>>>> ec1ea1d (d)
     with tqdm(total=len(os.listdir(json_path))) as pbar:
         pool = multiprocessing.Pool(processes=16)
         index = 1
@@ -81,14 +60,6 @@ def graph_future_calc(json_path, graph_path, name, tag: Tag):
         pool.close()
         pool.join()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
->>>>>>> bcfc9da (add)
-=======
-
->>>>>>> ec1ea1d (d)
 def test_raw(json_path, name, tag: Tag):
     graphI_list_acc: list[Graph24PointI] = []
     graphI_list_dead: list[Graph24PointI] = []
@@ -97,17 +68,8 @@ def test_raw(json_path, name, tag: Tag):
         file_path = os.path.join(json_path, file_name)
         # Read the file and process the data
         print(file_name)
-<<<<<<< HEAD
-<<<<<<< HEAD
         index = len(graphI_list_acc) + len(graphI_list_dead) + 1
         graphI = Graph24PointI(f"{name}I_{index}", index, tag)
-=======
-        graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
->>>>>>> bcfc9da (add)
-=======
-        index = len(graphI_list_acc) + len(graphI_list_dead) + 1
-        graphI = Graph24PointI(f"{name}I_{index}", index, tag)
->>>>>>> ec1ea1d (d)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -120,10 +82,6 @@ def test_raw(json_path, name, tag: Tag):
     print(f"Get Dead {len(graphI_list_dead)} graphs")
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> ec1ea1d (d)
 def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_list: list[Graph24PointI] = []
     
@@ -163,7 +121,6 @@ def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: Dataset
     dataset = SubgraphDataset(data_list)
     dataset.save(f"{dataset_path}/{name}_{config}.pt")
 
-<<<<<<< HEAD
 def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_dead: list[Graph24PointI] = []
     graphI_acc: list[Graph24PointI] = []
@@ -212,58 +169,6 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
             pbar.update(1)
     
     data_list = []
-=======
-=======
->>>>>>> ec1ea1d (d)
-def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
-    graphI_dead: list[Graph24PointI] = []
-    graphI_acc: list[Graph24PointI] = []
-    
-    with tqdm(total=len(os.listdir(json_path)), desc='load graphs') as pbar:
-        for file_name in os.listdir(json_path):
-            # print(f"Load file: {file_name}")
-            file_path = os.path.join(json_path, file_name)
-            # Read the file and process the data
-            index = int(file_name.split('_')[-1].split('.')[0])
-            graphI = Graph24PointI(f"{file_name.split('.')[0]}", index, tag)
-            graphI.load_from_json(file_path)
-            if graphI.achievements:
-                graphI_acc.append(graphI)
-            else:
-                graphI_dead.append(graphI)
-            pbar.update(1)
-    
-    print(f"Get Acc {len(graphI_acc)} graphs")
-    print(f"Get Dead {len(graphI_dead)} graphs")
-    
-    subgraph_list: list[Graph24PointII] = []
-    
-    with tqdm(total=config.total_num // 2, desc='subgraph sample in dead') as pbar:
-        for i in range(config.total_num // 2):
-            random.seed(time.time())
-            graphI = random.choice(graphI_dead)
-            nx_graph: DiGraph = graphI.convert_to_nx()
-            nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
-            subgraph = Graph24PointII(f"{name}II_{i + 1 + (config.total_num // 2)}", tag)
-            subgraph.from_nx(nx_subgraph)
-            subgraph.calc_type(graphI)
-            subgraph_list.append(subgraph)
-            pbar.update(1)
-            
-    with tqdm(total=config.total_num // 2, desc='subgraph sample in acc') as pbar:
-        for i in range(config.total_num // 2):
-            random.seed(time.time())
-            graphI = random.choice(graphI_acc)
-            nx_graph: DiGraph = graphI.convert_to_nx()
-            nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
-            subgraph = Graph24PointII(f"{name}II_{i + 1}", tag)
-            subgraph.from_nx(nx_subgraph)
-            subgraph.calc_type(graphI)
-            subgraph_list.append(subgraph)
-            pbar.update(1)
-    
-    data_list = []
->>>>>>> bcfc9da (add)
     with tqdm(total=len(subgraph_list), desc='convert to pyg') as pbar:
         for subgraph in subgraph_list:
             data = subgraph.convert_to_pyg()
@@ -282,17 +187,8 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
         # print(f"Load file: {file_name}")
         file_path = os.path.join(json_path, file_name)
         # Read the file and process the data
-<<<<<<< HEAD
-<<<<<<< HEAD
         index = len(graphI_list_acc) + len(graphI_list_dead) + 1
         graphI = Graph24PointI(f"{name}I_{index}", index, tag)
-=======
-        graphI = Graph24PointI(f"{name}I_{len(graphI_list_acc) + len(graphI_list_dead) + 1}", tag)
->>>>>>> bcfc9da (add)
-=======
-        index = len(graphI_list_acc) + len(graphI_list_dead) + 1
-        graphI = Graph24PointI(f"{name}I_{index}", index, tag)
->>>>>>> ec1ea1d (d)
         graphI.load_from_native_json(file_path)
         graphI.calc_goal().calc_achievements()
         # print(f"{graphI.name} get label {graphI.achievements}")
@@ -332,10 +228,6 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
     print(f"Get {len(data_list)} subgraphs")
     dataset = SubgraphDataset(data_list)
     dataset.save(f"{dataset_path}/{name}{config}.pt")
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> ec1ea1d (d)
 
 
 def combine_task(source_path, truth_path, target_path):
@@ -355,8 +247,17 @@ def combine_task(source_path, truth_path, target_path):
         combine_graph.save_to_json(os.path.join(target_path, f"{graphI.name}.json"))
     
 
-<<<<<<< HEAD
-=======
->>>>>>> bcfc9da (add)
-=======
->>>>>>> ec1ea1d (d)
+def build_gspan_data(graph_path, target_path, node_label, edge_label):
+    with open(f"{target_path}/graph.data", 'w', encoding='utf-8') as file:
+        cnt = 0
+        for file_name in tqdm(os.listdir(graph_path), desc='Build gspan data'):
+            
+            file.write(f"t # {cnt}\n")
+            cnt += 1
+            file_path = os.path.join(graph_path, file_name)
+            graphI = Graph24PointI.from_json(file_path)
+            graphI.re_index()
+            for node in graphI.nodes:
+                file.write(f"v {node.id} {node_label(node)}\n")
+            for edge in graphI.edges:
+                file.write(f"e {edge.src} {edge.dst} {edge_label(edge)}\n")

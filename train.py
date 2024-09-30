@@ -11,7 +11,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
 
-path = "/home/vincent/graphrule/data/subgraph/24point_2samplerrandom_walk-total_num6400-node_num10-node_featurenode.pt"
+path = "/home/vincent/graphrule/data/subgraph/24point_3_samplerrandom_walk-total_num16000-node_num8-node_featurenode.pt"
 data: SubgraphDataset = torch.load(path)
 # print(f"load data {data}")
 # 查看 data.y 的分布
@@ -32,3 +32,4 @@ model = GraphClassifier(data[0].x.shape[1], 128, 4).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 print(f"start train")
 train_loop(model, train_loader, test_loader, optimizer, device, 100)
+torch.save(model.state_dict(), "/home/vincent/graphrule/model/classifier.pt")
