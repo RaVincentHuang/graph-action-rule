@@ -29,7 +29,7 @@ for task in tqdm(tasks):
     for expr in accs:
         root = ExpressionTreeBuilder().build(expr)
         roots.append(root)
-    graph = Graph24PointI("24point", cnt, Tag("calc", "ToT", "24point"))
-    graph.from_ast(roots, data)
+        
+    graph = Graph24PointI.from_ast(roots, data, cnt)
     # graph.save_to_json(f"{graph_path}/{graph.name}_{cnt}.json")
     cnt += 1

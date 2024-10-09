@@ -256,8 +256,14 @@ class Graph24PointI(BaseGraph):
         res.re_index()
 
         return res
+    
+    @staticmethod
+    def from_ast(roots: list[ASTNode], nums: list[int], index) -> 'Graph24PointI':
+        graph = Graph24PointI("24point", index, Tag("calc", "ToT", "24point"))
+        graph.load_from_ast(roots, nums)
+        return graph
             
-    def from_ast(self, roots: list[ASTNode], nums: list[int]):
+    def load_from_ast(self, roots: list[ASTNode], nums: list[int]):
         self.nodes = []
         self.edges = []
         
