@@ -28,7 +28,7 @@ train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 
-model = GraphClassifier(data[0].x.shape[1], 128, 4).to(device)
+model = GraphClassifier(data[0].x.shape[1], 128, 2).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 print(f"start train")
 train_loop(model, train_loader, test_loader, optimizer, device, 100)

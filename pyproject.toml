@@ -10,7 +10,10 @@ authors = ["Vincent"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
+
+[tool.setuptools.packages.find]
+where = ["src"]
