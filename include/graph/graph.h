@@ -74,7 +74,7 @@ public:
 #endif
     }
 
-    ~Graph() {
+    Graph() {
         delete[] offsets_;
         delete[] neighbors_;
         delete[] labels_;

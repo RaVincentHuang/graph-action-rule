@@ -1,6 +1,7 @@
 from math import e
 from graph.matching import matching
-from graph.model import GraphClassifier
+from graph.model import GraphClassifier, NodeClassifier
+from graph.standard import node2node_edge, node_edge2node
 from utils.config import SubgraphMatchingConfig
 from llm.embedding import get_embedding
 
@@ -23,22 +24,27 @@ def read_lines(file_path: str, start: int, end: int) -> list[str]:
 def load_pattern_graph(path) -> list[nx.DiGraph]:
     graphs: list[nx.DiGraph] = []
     # print(f"load {path}")
+    graph = nx.DiGraph()
     with open(path, 'r') as file:
-        starts = {}
-        for i, line in enumerate(file):
+        for line in file:
             match line.split():
-                case ['v', node_cnt]:
-                    starts[i] = int(node_cnt)
-                    
-    for start, cnt in starts.items():
-        graph = nx.DiGraph()
-        with open(path, 'r') as file:
-            for line in islice(file, start, start + cnt):
-                match line.split():
-                    case ['e', u, v]:
-                        graph.add_edge(int(u), int(v))
-            graphs.append(graph)
+                case [index, 'p']:
+                    index = int(index)
+                    if len(graph):
+                        print(f"graph {graph.nodes(data=True)}")
+                        graphs.append(graph)
+                    graph = nx.DiGraph()
+                case ['v', node_id, label]:
+                    node_id, label = int(node_id), int(label)
+                    graph.add_node(node_id, label=label)
+                case ['e', u, v, label]:
+                    u, v, label = int(u), int(v), int(label)
+                    graph.nodes[v]['label'] = node_edge2node(graph.nodes[v]['label'], label)
+                    graph.add_edge(u, v)
+                case _:
+                    continue
     
+    print(f"load {len(graphs)} patterns")
     return graphs
             
 
@@ -51,6 +57,9 @@ class SearchGraph:
         self.class_model = GraphClassifier(1536 , 128, 2).to(self.device)
         self.class_model.eval()
         self.class_model.load_state_dict(torch.load("/home/vincent/graphrule/model/classifier.pt"))
+        self.node_model = NodeClassifier(4, 64, 2, 4).to(self.device)
+        self.node_model.eval()
+        self.node_model.load_state_dict(torch.load("/home/vincent/graphrule/model/node_classifier.pt"))
         
     def dump_graph(self):
         print("Nodes:")
@@ -63,8 +72,8 @@ class SearchGraph:
     def _get_graph_class(self, data) -> int:
         return self.class_model(data.to(self.device)).argmax(dim=1).item()
     
-    def add_node(self, node_id, **kwargs) -> None:
-        self.graph.add_node(node_id, feature=None, **kwargs)
+    def add_node(self, node_id, label, **kwargs) -> None:
+        self.graph.add_node(node_id, label=label, feature=None, **kwargs)
         
     def add_edge(self, u, v, **kwargs) -> None:
         self.graph.add_edge(u, v, **kwargs)
@@ -105,13 +114,18 @@ class SearchGraph:
         mapping = {node: i for i, node in enumerate(self.graph.nodes())}
         reverse_mapping = {i: node for node, i in mapping.items()}
         data_graph: nx.DiGraph = nx.relabel_nodes(self.graph, mapping)
+        # print(f"matching query, pattern: {pattern.nodes()}, data: {data_graph.nodes()}")
         result: list[set[int]] = []
         pattern = nx.relabel_nodes(pattern, {node: i for i, node in enumerate(pattern.nodes())})
         embs = matching(pattern, data_graph, self.matching_config)
+        if len(embs) > 0:
+            print(f"matching query, pattern: {pattern.nodes()}, data: {data_graph.nodes()}, result: {embs}")
         for emb in embs:
             true_emb = set(map(lambda x: reverse_mapping[x], emb))
             if true_emb.intersection(self.frontier):
                 result.append(true_emb)
+        if len(result):
+            print(f"matching query, pattern: {pattern.nodes()}, data: {data_graph.nodes()}, result: {result}")
         return result
     
     def get_subgraph(self, nodes: set[int]) -> nx.DiGraph:
@@ -143,6 +157,7 @@ class SearchGraph:
             for element in neg_counter:
                 if neg_counter[element] > pos_counter[element]:
                     need_prune.add(element)
-            print(f"delete {len(need_prune)} nodes: {need_prune}")
+            if need_prune:
+                print(f"delete {len(need_prune)} nodes: {need_prune}")
             self.frontier = self.frontier - need_prune
         print(f"end prune, frontier: {self.frontier}")

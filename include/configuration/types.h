@@ -48,7 +48,7 @@ public:
         estimated_embeddings_num_ = 0;
     }
 
-    ~TreeNode() {
+    TreeNode() {
         delete[] under_level_;
         delete[] bn_;
         delete[] fn_;
@@ -79,7 +79,7 @@ public:
         max_degree_ = 0;
     }
 
-    ~Edges() {
+    Edges() {
         delete[] offset_;
         delete[] edge_;
     }

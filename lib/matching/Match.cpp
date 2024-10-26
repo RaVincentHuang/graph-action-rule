@@ -339,26 +339,7 @@ int matching_call(const std::string& filter_type, const std::string& order_type,
 
     delete query_graph;
     delete data_graph;
-
-    /**
-     * End.
-     */
-    // std::cout << "--------------------------------------------------------------------" << std::endl;
-    // double preprocessing_time_in_ns = filter_vertices_time_in_ns + build_table_time_in_ns + generate_query_plan_time_in_ns;
-    // double total_time_in_ns = preprocessing_time_in_ns + enumeration_time_in_ns;
-
-    // printf("Load graphs time (seconds): %.4lf\n", NANOSECTOSEC(load_graphs_time_in_ns));
-    // printf("Filter vertices time (seconds): %.4lf\n", NANOSECTOSEC(filter_vertices_time_in_ns));
-    // printf("Build table time (seconds): %.4lf\n", NANOSECTOSEC(build_table_time_in_ns));
-    // printf("Generate query plan time (seconds): %.4lf\n", NANOSECTOSEC(generate_query_plan_time_in_ns));
-    // printf("Enumerate time (seconds): %.4lf\n", NANOSECTOSEC(enumeration_time_in_ns));
-    // printf("Preprocessing time (seconds): %.4lf\n", NANOSECTOSEC(preprocessing_time_in_ns));
-    // printf("Total time (seconds): %.4lf\n", NANOSECTOSEC(total_time_in_ns));
-    // printf("Memory cost (MB): %.4lf\n", BYTESTOMB(memory_cost_in_bytes));
-    // printf("#Embeddings: %zu\n", embedding_count);
-    // // printf("Call Count: %zu\n", call_count);
-    // printf("Per Call Count Time (nanoseconds): %.4lf\n", enumeration_time_in_ns / (call_count == 0 ? 1 : call_count));
-    // std::cout << "End." << std::endl;
+    
     return embedding_count;
 }
 

@@ -924,7 +924,7 @@ int intersect_shuffle_bsr_b4(int* bases_a, int* states_a, int size_a,
                 );
         __m128i state_mask = _mm_cmpeq_epi32(state_all, all_zero_si128);
         int mask = (_mm_movemask_ps((__m128)cmp_mask) &
-                ~(_mm_movemask_ps((__m128)state_mask)));
+                (_mm_movemask_ps((__m128)state_mask)));
 
         __m128i res_b = _mm_shuffle_epi8(base_a, shuffle_mask[mask]);
         __m128i res_s = _mm_shuffle_epi8(state_all, shuffle_mask[mask]);
@@ -1065,7 +1065,7 @@ int intersect_bmiss_uint_sttni_b8(int *set_a, int size_a,
 
         // word-wise check:
         while (r) {
-            int p = _mm_popcnt_u32((~r) & (r - 1));
+            int p = _mm_popcnt_u32((r) & (r - 1));
             r &= (r - 1);
             __m128i wc_a = _mm_set_epi32(set_a[i + p], set_a[i + p],
                             set_a[i + p], set_a[i + p]);

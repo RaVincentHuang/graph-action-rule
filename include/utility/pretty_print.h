@@ -371,7 +371,7 @@ namespace pretty_print {
     // Usage: "cout << pretty_print::custom_delims<MyDelims>(x)".
 
     struct custom_delims_base {
-        virtual ~custom_delims_base() {}
+        virtual custom_delims_base() {}
 
         virtual std::ostream &stream(::std::ostream &) = 0;
 

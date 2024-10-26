@@ -5,7 +5,7 @@ import torch
 from torch_geometric.data import Data, Dataset, OnDiskDataset
 
 from graph.sample import sample_graph
-from graph.standard import Graph24PointI, Graph24PointII, Graph24PointIII, SubgraphType
+from graph.standard import Graph24PointI, Graph24PointII, Graph24PointIII, Graph24PointIV, SubgraphType
 from llm.tag import Tag
 from utils.config import DatasetConfig
 
@@ -42,7 +42,7 @@ def _process_raw_file(file_path, name, tag, graph_path, index):
     graphI.save_to_json(f"{graph_path}/{graphI.name}.json")
     
 def _process_file(file_path, name, tag, graph_path, index):
-    graphI = Graph24PointI(f"{name}I_{index}", index, tag)
+    graphI = Graph24PointI(f"{name}_{index}", index, tag)
     graphI.load_from_json(file_path)
     graphI.calc_goal().calc_achievements()
     for node in graphI.nodes:
@@ -80,6 +80,7 @@ def test_raw(json_path, name, tag: Tag):
         
     print(f"Get Acc {len(graphI_list_acc)} graphs")
     print(f"Get Dead {len(graphI_list_dead)} graphs")
+    
 
 
 def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
@@ -88,7 +89,7 @@ def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: Dataset
     for filename in tqdm(os.listdir(json_path), desc='load graphs'):
         file_path = os.path.join(json_path, filename)
         graphI = Graph24PointI.from_json(file_path)
-        graphI.calc_goal().calc_achievements()
+        graphI.calc_goal().calc_achievements().achievements_remove_root()
         graphI_list.append(graphI)
     
     subgraph_type0_cnt = 0
@@ -104,7 +105,7 @@ def dataset_build_truth(json_path, dataset_path, name, tag: Tag, config: Dataset
             nx_graph: DiGraph = graphI.convert_to_nx()
             nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
             subgraph = Graph24PointIII(f"{name}II_{pbar.n + 1}", tag)
-            subgraph.from_nx(nx_subgraph)
+            subgraph.load_from_nx(nx_subgraph)
             subgraph.calc_type(graphI)
             if subgraph.type == SubgraphType.T0 and subgraph_type0_cnt < config.total_num // 2:
                 subgraph_type0_cnt += 1
@@ -151,7 +152,7 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
             nx_graph: DiGraph = graphI.convert_to_nx()
             nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
             subgraph = Graph24PointII(f"{name}II_{i + 1 + (config.total_num // 2)}", tag)
-            subgraph.from_nx(nx_subgraph)
+            subgraph.load_from_nx(nx_subgraph)
             subgraph.calc_type(graphI)
             subgraph_list.append(subgraph)
             pbar.update(1)
@@ -163,7 +164,7 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
             nx_graph: DiGraph = graphI.convert_to_nx()
             nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
             subgraph = Graph24PointII(f"{name}II_{i + 1}", tag)
-            subgraph.from_nx(nx_subgraph)
+            subgraph.load_from_nx(nx_subgraph)
             subgraph.calc_type(graphI)
             subgraph_list.append(subgraph)
             pbar.update(1)
@@ -179,6 +180,7 @@ def dataset_build(json_path, dataset_path, name, tag: Tag, config: DatasetConfig
     dataset = SubgraphDataset(data_list)
     dataset.save(f"{dataset_path}/{name}_{config}.pt")
     
+
 
 def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetConfig):
     graphI_list_acc: list[Graph24PointI] = []
@@ -206,7 +208,7 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
         print(f"Sample subgraph {nx_graph}")
         nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
         subgraph = Graph24PointII(f"{name}II_{i + 1}", tag)
-        subgraph.from_nx(nx_subgraph)
+        subgraph.load_from_nx(nx_subgraph)
         subgraph.calc_type(graphI)
         subgraph_list.append(subgraph)
         
@@ -216,7 +218,7 @@ def dataset_build_raw(json_path, dataset_path, name, tag: Tag, config: DatasetCo
         print(f"Sample subgraph {nx_graph}")
         nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
         subgraph = Graph24PointII(f"{name}II_{i + 1 + (config.total_num // 2)}", tag)
-        subgraph.from_nx(nx_subgraph)
+        subgraph.load_from_nx(nx_subgraph)
         subgraph.calc_type(graphI)
         subgraph_list.append(subgraph)
     
@@ -261,3 +263,62 @@ def build_gspan_data(graph_path, target_path, node_label, edge_label):
                 file.write(f"v {node.id} {node_label(node)}\n")
             for edge in graphI.edges:
                 file.write(f"e {edge.src} {edge.dst} {edge_label(edge)}\n")
+                
+                
+def build_grami_data(graph_path, target_path):
+    with open(f"{target_path}/graph.data", 'w', encoding='utf-8') as file:
+        cnt = 0
+        for file_name in tqdm(os.listdir(graph_path), desc='Build gspan data'):
+            
+            file.write(f"t # {cnt}\n")
+            cnt += 1
+            file_path = os.path.join(graph_path, file_name)
+            graphI = Graph24PointI.from_json(file_path)
+            graphI.re_index()
+            node_check = {node.id: i for i, node in enumerate(graphI.nodes)}
+            for node in graphI.nodes:
+                if node.id == 0:
+                    file.write(f"v {node.id} {1}\n")
+                    continue
+                tag =  len(list(filter(lambda s: len(s.replace(" ", "")),node.value[0].split('\n')))) + 1
+                file.write(f"v {node.id} {tag}\n")
+                
+            for edge in graphI.edges:
+                edge_operator = graphI.nodes[node_check[edge.dst]].value[2]
+                edge_label = 0
+                match edge_operator:
+                    case '+':
+                        edge_label = 1
+                    case '-':
+                        edge_label = 2
+                    case '*':
+                        edge_label = 3
+                    case '/':
+                        edge_label = 4
+                    case _:
+                        edge_label = 5
+                file.write(f"e {edge.src} {edge.dst} {edge_label}\n")     
+                
+def node_classify_data_build(graph_path, target_path, config: DatasetConfig):
+    graphI_list: list[Graph24PointI] = []
+    
+    for filename in tqdm(os.listdir(graph_path), desc='load graphs'):
+        file_path = os.path.join(graph_path, filename)
+        graphI = Graph24PointI.from_json(file_path)
+        graphI.calc_goal().calc_achievements().calc_node_label()
+        graphI_list.append(graphI)
+    
+    data_list = []
+    for _ in tqdm(range(config.total_num), desc='sample subgraph'):
+        random.seed(time.time())
+        graphI = random.choice(graphI_list)
+        nx_graph: DiGraph = graphI.convert_to_nx()
+        nx_subgraph = sample_graph(nx_graph, config.sampler, config.node_num, config.node_num_random)
+        subgraph = Graph24PointIV.from_nx(nx_subgraph)
+        subgraph.calc_label(graphI.node_label)
+        data = subgraph.convert_to_pyg()
+        data_list.append(data)
+    
+    print(f"Get {len(data_list)} subgraphs")
+    dataset = SubgraphDataset(data_list)
+    dataset.save(f"{target_path}/nodes_{config}.pt")

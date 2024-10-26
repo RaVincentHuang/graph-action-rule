@@ -1,25 +1,24 @@
 import sys
 sys.path.append('/home/vincent/graphrule/src')
 
-from graph.model import GraphClassifier, GraphClassifier2
+from graph.model import NodeClassifier
 from graph.store import SubgraphDataset
 import torch
 from torch_geometric.loader import DataLoader
 from torch.utils.data import random_split
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
 
-path = "/home/vincent/graphrule/data/subgraph/24point_3_samplerrandom_walk-total_num16000-node_num8-node_featurenode.pt"
+path = "/home/vincent/graphrule/data/subgraph/nodes_samplerrandom_walk-total_num16000-node_num8-node_featurenode.pt"
 data: SubgraphDataset = torch.load(path)
-# print(f"load data {data}")
-# 查看 data.y 的分布
-labels = [d.y.item() for d in data]
-# print(f"labels: {labels}")
-label_counts = torch.tensor(labels).bincount()
-print(f"Label distribution: {label_counts}")
 
+# scaler = StandardScaler()
+# for graph in data:
+#     graph['node'].x = torch.tensor(scaler.fit_transform(graph['node'].x), dtype=torch.float)
+    
 train_ratio = 0.8
 train_size = int(len(data) * train_ratio)
 test_size = len(data) - train_size
@@ -28,8 +27,8 @@ train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 
-model = GraphClassifier(data[0].x.shape[1], 128, 2).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+model = NodeClassifier(4, 64, 2, 4).to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 print(f"start train")
-GraphClassifier.train_loop(model, train_loader, test_loader, optimizer, device, 100)
-torch.save(model.state_dict(), "/home/vincent/graphrule/model/classifier.pt")
+NodeClassifier.train_loop(model, train_loader, test_loader, optimizer, device, 1000)
+torch.save(model.state_dict(), "/home/vincent/graphrule/model/node_classifier.pt")

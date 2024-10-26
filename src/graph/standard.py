@@ -5,22 +5,62 @@ import json
 import networkx as nx
 from networkx import DiGraph
 from networkx import is_empty
+from numpy import mat
 import torch_geometric.utils
 
 from task.game24 import ASTNode 
 
 import llm.embedding
 from llm.tag import Tag
+from task.game24 import calc_exprs_4, calc_exprs_3, calc_exprs_2
 import sympy
 import re
 
 import torch
 import torch_geometric.data
+import queue
+import math
+
+def node_edge2node(node: int, edge: int) -> int:
+    match node, edge:
+        case 1, _:
+            return 1
+        case 2, 1: # step=2, edge=+
+            return 2
+        case 2, 2: # step=2, edge=-
+            return 3
+        case 2, 3: # step=2, edge=*
+            return 4
+        case 2, 4: # step=2, edge=/
+            return 5
+        case 3, 1: # step=3, edge=+
+            return 6
+        case 3, 2: # step=3, edge=-
+            return 7
+        case 3, 3: # step=3, edge=*
+            return 8
+        case 3, 4: # step=3, edge=/
+            return 9
+        case 4, 1: # step=4, edge=+
+            return 10
+        case 4, 2: # step=4, edge=-
+            return 11
+        case 4, 3: # step=4, edge=*
+            return 12
+        case 4, 4: # step=4, edge=/
+            return 13
+        case _:
+            return 14
+    
+def node2node_edge(node: int) -> tuple[int, int]:
+    if node == 17:
+        return 5, 5
+    return math.ceil(node / 4), node % 4
 
 class Node:
     def __init__(self, id, value, acc: float, feature=None):
         self.id = id
-        self.value = value
+        self.value = value # (formula, last_formula, operator)
         self.feature = feature
         self.acc = acc
     
@@ -29,10 +69,9 @@ class Node:
         text = ""
         match task:
             case '24point':
-                text = self.value[0]
+                text = self.value[1]
         embedding = llm.embedding.get_embedding(text)
         self.feature = embedding
-        
         return self
     
     def __str__(self) -> str:
@@ -82,7 +121,7 @@ class BaseGraph:
         
         return nx_graph
     
-    def from_nx(self, nx_graph: nx.DiGraph):
+    def load_from_nx(self, nx_graph: nx.DiGraph):
         self.nodes = []
         self.edges = []
         for node_id in nx_graph.nodes:
@@ -117,6 +156,7 @@ class Graph24PointI(BaseGraph):
         self.index = index
         self.goal = set()
         self.achievements = set()
+        self.node_label = {}
         
     def load_from_native_json(self, json_path):
         self.nodes = []
@@ -174,6 +214,14 @@ class Graph24PointI(BaseGraph):
             if not flag:
                 break
         
+        return self
+    
+    def achievements_remove_root(self):
+        self.achievements.remove(0)
+        return self
+    
+    def achievements_add_root(self):
+        self.achievements.add(0)
         return self
                 
     def save_to_json(self, json_path):
@@ -233,6 +281,72 @@ class Graph24PointI(BaseGraph):
             graph = Graph24PointI(name, index, tag)
             graph.load_from_json(json_path)
         return graph
+    
+    def calc_node_label(self):
+        index_check = {}
+        for i, node in enumerate(self.nodes):
+            index_check[node.id] = i
+        steps = {}
+        father = {}
+        q = queue.Queue()
+        steps[self.nodes[0].id] = 0
+        q.put(self.nodes[0].id)
+        while not q.empty():
+            node_id = q.get()
+            node = self.nodes[index_check[node_id]]
+            try:
+                nums = list(map(lambda x: eval(re.search(r'-?\d+\.?\d*\/?-?\d*\.?\d*', x).group()), node.value[1].split('left: ')[-1].split(')')[0].split()))
+                # print(nums)
+                match nums:
+                    case [num1, num2, num3, num4]:
+                        if calc_exprs_4(num1, num2, num3, num4):
+                            # self.node_label[node_id] = 3
+                            self.node_label[node_id] = 1
+                        else:
+                            # self.node_label[node_id] = -1
+                            self.node_label[node_id] = 0
+                    case [num1, num2, num3]:
+                        if calc_exprs_3(num1, num2, num3):
+                            # self.node_label[node_id] = 2
+                            self.node_label[node_id] = 1
+                        else:
+                            # father_label = self.node_label[father[node_id]]
+                            # self.node_label[node_id] = father_label + 1 if father_label != -1 else -1
+                            self.node_label[node_id] = 0
+                    case [num1, num2]:
+                        if calc_exprs_2(num1, num2):
+                            self.node_label[node_id] = 1
+                        else:
+                            # father_label = self.node_label[father[node_id]]
+                            # self.node_label[node_id] = father_label + 1 if father_label != -1 else -1
+                            self.node_label[node_id] = 0
+                            
+                    case [num1]:
+                        if num1 == 24:
+                            # self.node_label[node_id] = 0
+                            self.node_label[node_id] = 1
+                        else:
+                            # father_label = self.node_label[father[node_id]]
+                            # self.node_label[node_id] = father_label + 1 if father_label != -1 else -1
+                            self.node_label[node_id] = 0
+
+                    case _:
+                        # father_label = self.node_label[father[node_id]]
+                        # self.node_label[node_id] = father_label + 1 if father_label != -1 else -1
+                        self.node_label[node_id] = 0
+            except Exception as e:
+                print(f"Error in node {node.value[1]} ! {e}")
+                # father_label = self.node_label[father[node_id]]
+                # self.node_label[node_id] = father_label + 1 if father_label != -1 else -1
+                self.node_label[node_id] = 0
+            
+            for edge in self.edges:
+                if edge.src == node_id:
+                    father[edge.dst] = node_id
+                    steps[edge.dst] = steps[node_id] + 1
+                    q.put(edge.dst)
+
+        return self
         
             
     def combine(self, graph: 'Graph24PointI') -> 'Graph24PointI':
@@ -309,7 +423,7 @@ class Graph24PointI(BaseGraph):
             
             def formula(self):
                 nums = [str(x) for x in self.nums if x != -114514]
-                left = ", ".join(map(str, nums))
+                left = " ".join(map(str, nums))
                 if self.op is None:
                     return left
                 return f"{self.left} {self.op} {self.right} = {self.value} (left: {left}) \n"
@@ -345,11 +459,14 @@ class Graph24PointI(BaseGraph):
             pre = formulas[parent_id] if parent_id in formulas else ""
             formula = pre + last_formula
             formulas[id] = formula
-            self.nodes.append(Node(id, (last_formula, formula, node.op), acc=0))
+            self.nodes.append(Node(id, (formula, last_formula, node.op), acc=0))
             self.edges.append(Edge(parent_id, id))
             
     def re_index(self):
         id_map = {node.id: i for i, node in enumerate(self.nodes)}
+        if len(self.node_label):
+            self.node_label = {id_map[k]: v for k, v in self.node_label.items()}
+        
         for i, node in enumerate(self.nodes):
             node.id = i
         
@@ -449,3 +566,65 @@ class Graph24PointIII(BaseGraph):
     
     def __str__(self) -> str:
         return f"Type: {self.type}\n" + super().__str__()
+    
+class Graph24PointIV(BaseGraph):
+    def __init__(self, name, tag):
+        super().__init__(name, tag)
+        self.label = {}
+    
+    @staticmethod
+    def from_nx(nx_graph: nx.DiGraph) -> 'Graph24PointIV':
+        graph = Graph24PointIV("24point", Tag("sample", "ToT", "24point"))
+        graph.load_from_nx(nx_graph)
+        return graph
+    
+    def calc_label(self, labels: dict[int, int]):
+        self.label = {node.id: labels[node.id] for node in self.nodes}
+    
+    def convert_to_pyg(self) -> torch_geometric.data.HeteroData:
+        data = torch_geometric.data.HeteroData()
+        
+        id_check = {node.id: i for i, node in enumerate(self.nodes)}
+        
+        def get_nums(s: str) -> list[float]:
+            # print(s, "S")
+            nums = s.split('left: ')[-1].split(')')[0].split()
+            try:
+                nums = list(map(lambda x: float(x), nums))
+            except:
+                try:
+                    nums = list(map(lambda x: eval(re.search(r'-?\d+\.?\d*\/?-?\d*\.?\d*', x).group()), nums))
+                except:
+                    nums = [0.0, 0.0, 0.0, 0.0]
+            # print(nums)
+            nums = sorted(nums, reverse=True)
+            while len(nums) < 4:
+                nums.append(0)
+            return nums
+        
+        data['node'].x = torch.tensor([get_nums(node.value[1]) for node in self.nodes], dtype=torch.float)
+        
+        op_add_edge_index, op_sub_edge_index, op_mul_edge_index, op_div_edge_index = [], [], [], []
+        for edge in self.edges:
+            match self.nodes[id_check[edge.dst]].value[2]:
+                case '+':
+                    op_add_edge_index.append([id_check[edge.src], id_check[edge.dst]])
+                case '-':
+                    op_sub_edge_index.append([id_check[edge.src], id_check[edge.dst]])
+                case '*':
+                    op_mul_edge_index.append([id_check[edge.src], id_check[edge.dst]])
+                case '/':
+                    op_div_edge_index.append([id_check[edge.src], id_check[edge.dst]])
+        
+        data['node', 'add', 'node'].edge_index = torch.tensor(op_add_edge_index, dtype=torch.long).t().contiguous()
+        data['node', 'sub', 'node'].edge_index = torch.tensor(op_sub_edge_index, dtype=torch.long).t().contiguous()
+        data['node', 'mul', 'node'].edge_index = torch.tensor(op_mul_edge_index, dtype=torch.long).t().contiguous()
+        data['node', 'div', 'node'].edge_index = torch.tensor(op_div_edge_index, dtype=torch.long).t().contiguous()
+        data.y = torch.tensor([self.label[node.id] if self.label[node.id] != -1 else 7 for node in sorted(self.nodes, key=lambda n: n.id)], dtype=torch.long)
+        return data
+    
+    def __format__(self, format_spec: str) -> str:
+        return f"Type: {self.label}\n" + super().__format__(format_spec)
+    
+    def __str__(self) -> str:
+        return f"Type: {self.label}\n" + super().__str__()

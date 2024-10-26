@@ -166,7 +166,7 @@ uint32_t BitsetOperation::extractBitset(const uint64_t *bitset, uint32_t length,
     for (uint32_t i = 0; i < length; ++i) {
         uint64_t w = bitset[i];
         while (w != 0) {
-            uint64_t t = w & (~w + 1);
+            uint64_t t = w & (w + 1);
             int r = __builtin_ctzll(w);
             output[outpos++] = (uint32_t)(r + base);
             w ^= t;

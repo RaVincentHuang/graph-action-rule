@@ -1,6 +1,7 @@
 from llm.chat import gpt
 from utils.config import LLMConfig, SearchConfig, SubgraphMatchingConfig
 from tot.search_graph import SearchGraph, load_pattern_graph
+from graph.standard import node_edge2node
 
 import itertools
 import numpy as np
@@ -12,6 +13,15 @@ import json
 from typing import Any, Dict, Union
 
 import networkx as nx
+
+def operator2label(operator):
+    return {
+        '+': 1,
+        '-': 2,
+        '*': 3,
+        '/': 4
+    }.get(operator, 5)
+
 
 def get_value(task: Task, x, y, n_evaluate_sample, cache_value=True):
     value_prompt = task.value_prompt_wrap(x, y)
@@ -72,7 +82,7 @@ matching_config = SubgraphMatchingConfig(filter_type, order_type, engine_type, o
 
 def solve(search_config: SearchConfig, llm_config: LLMConfig, task: Task, idx, to_print=True):
     
-    patterns = load_pattern_graph("/home/vincent/graphrule/data/frequent_pattern/no_label.data")
+    patterns = load_pattern_graph("/home/vincent/graphrule/data/frequent_pattern/1000.txt")
     search_graph = SearchGraph(matching_config)
     id_check = {}
     ys_check = {}
@@ -90,7 +100,7 @@ def solve(search_config: SearchConfig, llm_config: LLMConfig, task: Task, idx, t
     print(gpt)
     x = task.get_input(idx)  # input
     # TODO add root node
-    search_graph.add_node(node_num, step=0, last_formula=x, operator='null')
+    search_graph.add_node(node_num, label=1, step=0, last_formula=x, operator='null')
     id_check[x] = node_num
     ys_check[node_num] = x
     logNewState(tree, x, value='', parent='null', step=0)
@@ -112,7 +122,8 @@ def solve(search_config: SearchConfig, llm_config: LLMConfig, task: Task, idx, t
                     operator_list = re.findall(r'[+\-*/]', last_formula)
                     operator = operator_list[0] if operator_list else ''
                     # TODO add node
-                    search_graph.add_node(node_num, step=step+1, last_formula=last_formula, operator=operator)
+                    label = node_edge2node(step+1 + 1, operator2label(operator))
+                    search_graph.add_node(node_num, label, step=step+1, last_formula=last_formula, operator=operator)
                     search_graph.add_frontier(node_num)
                     search_graph.add_edge(id_check[y if y else x], node_num)
                     id_check[child] = node_num

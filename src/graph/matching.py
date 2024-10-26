@@ -25,7 +25,7 @@ def matching(query: nx.DiGraph, data: nx.DiGraph, config: utils.config.SubgraphM
     with open(query_path, 'w') as f:
         f.write(f"t {query.number_of_nodes()} {query.number_of_edges()}\n")
         for node in query.nodes():
-            f.write(f"v {node} {1} {query.degree(node)}\n")
+            f.write(f"v {node} {query.nodes[node]['label']} {query.degree(node)}\n")
         for u, v in query.edges():
             f.write(f"e {u} {v}\n")
 
@@ -33,7 +33,7 @@ def matching(query: nx.DiGraph, data: nx.DiGraph, config: utils.config.SubgraphM
     with open(data_path, 'w') as f:
         f.write(f"t {data.number_of_nodes()} {data.number_of_edges()}\n")
         for node in data.nodes():
-            f.write(f"v {node} {1} {data.degree(node)}\n")
+            f.write(f"v {node} {data.nodes[node]['label']} {data.degree(node)}\n")
         for u, v in data.edges():
             f.write(f"e {u} {v}\n")
     

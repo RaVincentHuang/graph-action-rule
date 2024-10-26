@@ -1,7 +1,9 @@
 import sys
+
+from yaml import Node
 sys.path.append('/home/vincent/graphrule/src')
 import graph
-from graph.store import dataset_build, graph_feature_calc, test_raw, combine_task, dataset_build_truth
+from graph.store import dataset_build, graph_feature_calc, test_raw, combine_task, dataset_build_truth, node_classify_data_build, build_gspan_data, build_grami_data
 from graph.standard import Graph24PointI
 from graph.transform import combine_nodes
 from llm.tag import Tag
@@ -64,22 +66,26 @@ def reformat(graph_path, save_path, name, tag: Tag):
 
 
 json_path = "/home/vincent/graphrule/data/graph/truth"
-graph_path = "/home/vincent/graphrule/data/graph/gpt4o-mini-0.7-p1v5g5_1_re_combine"
+graph_path = "/home/vincent/graphrule/data/graph/gpt4o-mini-0.7-p1v5g5_1_re"
 
 source_path = "/home/vincent/graphrule/data/graph/gpt4o-mini-0.7-p1v5g5_1_re"
-target_path = "/home/vincent/graphrule/data/subgraph"
-truth_path = "/home/vincent/graphrule/data/graph/truth_combine_re_format"
+truth_path = "/home/vincent/graphrule/data/graph/truth_feature"
+
+target_path = "/home/vincent/graphrule/data/frequent_pattern"
 
 name = "24point"
-tag = Tag("gpt-4o-mini", "ToT", "24point")
+tag = Tag("calc", "ToT", "24point")
 # test_raw(json_path, "24point", Tag("gpt-4o-mini", "ToT", "24point"))
-# graph_feature_calc(target_path, target_path, "24point", Tag("calc", "ToT", "24point"))
+# graph_feature_calc(truth_path, target_path, "24point", Tag("calc", "ToT", "24point"))
 # calc_index(source_path, target_path, name, tag)
-# combine_nodes_with_value(source_path, target_path, name, tag)
+# combine_nodes_with_value(source_path, truth_path, name, tag)
 # reformat(source_path, target_path, name, tag)
 
 
 # re_index(source_path, target_path, name, tag)
 # combine_task(source_path, truth_path, graph_path)
 
-dataset_build_truth(graph_path, target_path, "24point_3", Tag("gpt-4o-mini", "ToT", "24point"), DatasetConfig("random_walk", 16000, 8, node_random))
+# dataset_build_truth(graph_path, target_path, "24point_3", Tag("gpt-4o-mini", "ToT", "24point"), DatasetConfig("random_walk", 16000, 8, node_random))
+# node_classify_data_build(graph_path, target_path, DatasetConfig("random_walk", 16000, 8, node_random))
+
+build_grami_data(graph_path, target_path)
