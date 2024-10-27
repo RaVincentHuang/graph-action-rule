@@ -22,40 +22,21 @@ import queue
 import math
 
 def node_edge2node(node: int, edge: int) -> int:
-    match node, edge:
-        case 1, _:
-            return 1
-        case 2, 1: # step=2, edge=+
-            return 2
-        case 2, 2: # step=2, edge=-
-            return 3
-        case 2, 3: # step=2, edge=*
-            return 4
-        case 2, 4: # step=2, edge=/
-            return 5
-        case 3, 1: # step=3, edge=+
-            return 6
-        case 3, 2: # step=3, edge=-
-            return 7
-        case 3, 3: # step=3, edge=*
-            return 8
-        case 3, 4: # step=3, edge=/
-            return 9
-        case 4, 1: # step=4, edge=+
-            return 10
-        case 4, 2: # step=4, edge=-
-            return 11
-        case 4, 3: # step=4, edge=*
-            return 12
-        case 4, 4: # step=4, edge=/
-            return 13
-        case _:
-            return 14
-    
+    if node == 1:
+        return 1
+    if node in {2, 3, 4} and edge in {1, 2, 3, 4}:
+        return (node - 2) * 4 + edge + 1
+    return 14
+
 def node2node_edge(node: int) -> tuple[int, int]:
-    if node == 17:
-        return 5, 5
-    return math.ceil(node / 4), node % 4
+    if node == 1:
+        return 1, 1
+    if 2 <= node <= 13:
+        node -= 1
+        edge = (node - 1) % 4 + 1
+        node = (node - 1) // 4 + 2
+        return (node, edge)
+    return (1, 1)
 
 class Node:
     def __init__(self, id, value, acc: float, feature=None):

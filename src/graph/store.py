@@ -280,24 +280,21 @@ def build_grami_data(graph_path, target_path):
                 if node.id == 0:
                     file.write(f"v {node.id} {1}\n")
                     continue
-                tag =  len(list(filter(lambda s: len(s.replace(" ", "")),node.value[0].split('\n')))) + 1
-                file.write(f"v {node.id} {tag}\n")
+                match node.value[2]:
+                    case '+':
+                        edge_label = 2
+                    case '-':
+                        edge_label = 3
+                    case '*':
+                        edge_label = 4
+                    case '/':
+                        edge_label = 5
+                    case _:
+                        edge_label = 6
+                file.write(f"v {node.id} {edge_label}\n")
                 
             for edge in graphI.edges:
-                edge_operator = graphI.nodes[node_check[edge.dst]].value[2]
-                edge_label = 0
-                match edge_operator:
-                    case '+':
-                        edge_label = 1
-                    case '-':
-                        edge_label = 2
-                    case '*':
-                        edge_label = 3
-                    case '/':
-                        edge_label = 4
-                    case _:
-                        edge_label = 5
-                file.write(f"e {edge.src} {edge.dst} {edge_label}\n")     
+                file.write(f"e {edge.src} {edge.dst} {1}\n")     
                 
 def node_classify_data_build(graph_path, target_path, config: DatasetConfig):
     graphI_list: list[Graph24PointI] = []

@@ -82,7 +82,7 @@ matching_config = SubgraphMatchingConfig(filter_type, order_type, engine_type, o
 
 def solve(search_config: SearchConfig, llm_config: LLMConfig, task: Task, idx, to_print=True):
     
-    patterns = load_pattern_graph("/home/vincent/graphrule/data/frequent_pattern/1000.txt")
+    patterns = load_pattern_graph("/home/vincent/graphrule/data/frequent_pattern/800.txt")
     search_graph = SearchGraph(matching_config)
     id_check = {}
     ys_check = {}

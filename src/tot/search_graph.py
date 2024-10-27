@@ -37,9 +37,8 @@ def load_pattern_graph(path) -> list[nx.DiGraph]:
                 case ['v', node_id, label]:
                     node_id, label = int(node_id), int(label)
                     graph.add_node(node_id, label=label)
-                case ['e', u, v, label]:
-                    u, v, label = int(u), int(v), int(label)
-                    graph.nodes[v]['label'] = node_edge2node(graph.nodes[v]['label'], label)
+                case ['e', u, v, _]:
+                    u, v = int(u), int(v)
                     graph.add_edge(u, v)
                 case _:
                     continue
@@ -117,7 +116,9 @@ class SearchGraph:
         # print(f"matching query, pattern: {pattern.nodes()}, data: {data_graph.nodes()}")
         result: list[set[int]] = []
         pattern = nx.relabel_nodes(pattern, {node: i for i, node in enumerate(pattern.nodes())})
+        # print(f"start matching query, pattern: {pattern.nodes()}, data: {data_graph.nodes()}")
         embs = matching(pattern, data_graph, self.matching_config)
+        # print(f"end matching query, pattern: {pattern.nodes()}, data: {data_graph.nodes()}")
         if len(embs) > 0:
             print(f"matching query, pattern: {pattern.nodes()}, data: {data_graph.nodes()}, result: {embs}")
         for emb in embs:
@@ -132,12 +133,14 @@ class SearchGraph:
         return self.graph.subgraph(nodes)
     
     def prune_with_classification(self, patterns: list[nx.DiGraph]):
-        print(f"start prune, frontier: {self.frontier}")
+        print(f"start prune, frontier: {self.frontier}, patterns {len(patterns)}")
         self.calc_feature(lambda x: x['last_formula'])
         for i, pattern in tqdm(enumerate(patterns), "prune for each patterns"):
             neg = []
             posi = []
+            # print(f"prune for pattern {i}")
             embs = self.matching_query(pattern)
+            # print(f"embs: {embs}")
             for emb in tqdm(embs, f"prune for pattern {i} ", leave=False):
                 if not emb.intersection(self.frontier):
                     continue

@@ -1,4 +1,5 @@
 import ctypes
+from math import e
 import utils
 import utils.config
 import networkx as nx
@@ -40,7 +41,11 @@ def matching(query: nx.DiGraph, data: nx.DiGraph, config: utils.config.SubgraphM
     query_path = ctypes.c_char_p(query_path.encode('utf-8'))
     data_path = ctypes.c_char_p(data_path.encode('utf-8'))
 
-    emb_cnt = libmatching.matching(query_path, data_path, *config.get_ctype())
+    try:
+        emb_cnt = libmatching.matching(query_path, data_path, *config.get_ctype())
+    except Exception as e:
+        print(e, f"Error in {query}, {data}")
+        emb_cnt = 0
     
     result = []
     with open(emb_path, 'r') as f:
